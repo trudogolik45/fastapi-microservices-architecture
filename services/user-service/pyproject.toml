@@ -5,9 +5,11 @@ description = "User service"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "bcrypt>=5.0.0",
     "fastapi[standard]>=0.162.0",
     "grpcio>=1.85.1",
     "grpcio-tools>=1.85.1",
     "psycopg[binary]>=3.3.7",
+    "pyjwt>=2.15.1",
     "sqlmodel>=0.0.48",
 ]
