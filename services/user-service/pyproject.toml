@@ -17,3 +17,13 @@ dependencies = [
     "pyjwt>=2.15.1",
     "sqlmodel>=0.0.48",
 ]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+# "." for local modules (main, db, ...), "../.." for the shared package
+pythonpath = [".", "../.."]
