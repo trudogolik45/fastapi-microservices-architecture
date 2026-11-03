@@ -1,10 +1,13 @@
 from contextlib import asynccontextmanager
 
+import grpc
 from fastapi import Depends, FastAPI
 from sqlmodel import Session, SQLModel, select
 
 from db import engine, get_session
 from models import User, UserPublic
+import product_pb2
+import product_pb2_grpc
 
 
 @asynccontextmanager
@@ -32,3 +35,21 @@ def create_user(user: User, session: Session = Depends(get_session)):
 @app.get("/users/", response_model=list[UserPublic])
 def read_users(session: Session = Depends(get_session)):
     return session.exec(select(User)).all()
+
+
+@app.get("/users/{user_id}/purchases/{product_id}")
+def get_user_purchase(user_id: int, product_id: int):
+    # Connect to the Product service via gRPC
+    with grpc.insecure_channel("product-service:50051") as channel:
+        stub = product_pb2_grpc.ProductServiceStub(channel)
+        response = stub.GetProduct(product_pb2.ProductRequest(id=product_id))
+
+    return {
+        "user_id": user_id,
+        "product_details": {
+            "id": response.id,
+            "name": response.name,
+            "price": response.price,
+        },
+        "source": "gRPC",
+    }

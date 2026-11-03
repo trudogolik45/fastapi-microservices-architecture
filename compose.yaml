@@ -9,6 +9,7 @@ services:
       - DATABASE_URL=postgresql+psycopg://postgres:password@db:5432/user_db
     depends_on:
       - db
+      - product-service
 
   db:
     image: postgres:16-alpine
@@ -20,6 +21,11 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  product-service:
+    build:
+      context: .
+      dockerfile: services/product-service/Dockerfile
 
 volumes:
   postgres_data:
