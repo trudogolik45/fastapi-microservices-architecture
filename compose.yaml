@@ -1,10 +1,27 @@
 services:
+  traefik:
+    image: traefik:v3.6
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "${GATEWAY_PORT:-80}:80"
+      - "${TRAEFIK_DASHBOARD_PORT:-8080}:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
   user-service:
     build:
       context: .
       dockerfile: services/user-service/Dockerfile
-    ports:
-      - "8001:8000"
+    # No direct ports: all traffic goes through the Traefik gateway
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.user-service.entrypoints=web"
+      - "traefik.http.routers.user-service.rule=PathPrefix(`/users`) || PathPrefix(`/docs`) || PathPrefix(`/openapi.json`)"
+      - "traefik.http.services.user-service.loadbalancer.server.port=8000"
     environment:
       - DATABASE_URL=postgresql+psycopg://postgres:password@db:5432/user_db
     depends_on:
@@ -22,6 +39,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  # Internal gRPC backend: no Traefik labels, invisible from outside
   product-service:
     build:
       context: .
