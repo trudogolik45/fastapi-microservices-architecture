@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from contextlib import asynccontextmanager
@@ -49,9 +50,17 @@ async def process_message(message: aio_pika.abc.AbstractIncomingMessage):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. Connect to RabbitMQ
-    connection = await aio_pika.connect_robust(RABBITMQ_URL)
-    channel = await connection.channel()
+    # 1. Connect to RabbitMQ with retry
+    for attempt in range(1, 6):
+        try:
+            connection = await aio_pika.connect_robust(RABBITMQ_URL)
+            channel = await connection.channel()
+            break
+        except Exception:
+            print(f"RabbitMQ not ready yet, retrying in 2 seconds (attempt {attempt}/5)...")
+            await asyncio.sleep(2)
+    else:
+        raise RuntimeError("Failed to connect to RabbitMQ after 5 attempts")
 
     # 2. Declare the dead letter exchange (DLX) and dead letter queue (DLQ)
     dlx = await channel.declare_exchange("dlx", aio_pika.ExchangeType.DIRECT)

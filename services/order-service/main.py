@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from contextlib import asynccontextmanager
@@ -15,8 +16,16 @@ rabbitmq_connection = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global rabbitmq_connection
-    # Connect to RabbitMQ container
-    rabbitmq_connection = await aio_pika.connect_robust(RABBITMQ_URL)
+    # Connect to RabbitMQ container with retry
+    for attempt in range(1, 6):
+        try:
+            rabbitmq_connection = await aio_pika.connect_robust(RABBITMQ_URL)
+            break
+        except Exception:
+            print(f"RabbitMQ not ready yet, retrying in 2 seconds (attempt {attempt}/5)...")
+            await asyncio.sleep(2)
+    else:
+        raise RuntimeError("Failed to connect to RabbitMQ after 5 attempts")
     print("Connected to RabbitMQ!")
 
     # The queue (with its dead-letter settings) is declared by the inventory

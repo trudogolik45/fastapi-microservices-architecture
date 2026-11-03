@@ -1,0 +1,8 @@
+# Auto-register Loki so you don't have to add the data source by hand
+apiVersion: 1
+datasources:
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: true
