@@ -70,5 +70,15 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  inventory-service:
+    build:
+      context: .
+      dockerfile: services/inventory-service/Dockerfile
+    ports:
+      - "8003:8000" # Exposed directly for testing
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
 volumes:
   postgres_data:
