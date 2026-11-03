@@ -19,10 +19,8 @@ async def lifespan(app: FastAPI):
     rabbitmq_connection = await aio_pika.connect_robust(RABBITMQ_URL)
     print("Connected to RabbitMQ!")
 
-    # Declare the queue so it exists in RabbitMQ
-    async with rabbitmq_connection.channel() as channel:
-        await channel.declare_queue(ORDER_QUEUE, durable=True)
-
+    # The queue (with its dead-letter settings) is declared by the inventory
+    # service. Redeclaring it here without the same arguments would fail.
     yield
     # Cleanup on shutdown
     await rabbitmq_connection.close()

@@ -15,14 +15,21 @@ inventory_db = {
 
 
 async def process_message(message: aio_pika.abc.AbstractIncomingMessage):
-    # Automatically ACKs the message if no error occurs
-    async with message.process():
+    try:
         event_data = json.loads(message.body.decode())
         print(f"Received event: {event_data}")
 
         product_id = event_data.get("product_id")
 
-        # Simulate business logic: reduce stock
+        # Simulate a fatal error
+        if product_id == 999:
+            print("Fatal error: simulated crash! Rejecting message.")
+            # Reject the message and do NOT requeue it.
+            # This triggers the Dead Letter Exchange (DLX).
+            await message.reject(requeue=False)
+            return
+
+        # Normal business logic
         if product_id in inventory_db and inventory_db[product_id]["stock"] > 0:
             inventory_db[product_id]["stock"] -= 1
             print(
@@ -32,6 +39,13 @@ async def process_message(message: aio_pika.abc.AbstractIncomingMessage):
         else:
             print(f"Out of stock or invalid product: {product_id}")
 
+        # Manually acknowledge the message was processed successfully
+        await message.ack()
+    except Exception as e:
+        print(f"Error processing message: {e}")
+        # If any Python error occurs, safely dead-letter the message
+        await message.reject(requeue=False)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -39,10 +53,19 @@ async def lifespan(app: FastAPI):
     connection = await aio_pika.connect_robust(RABBITMQ_URL)
     channel = await connection.channel()
 
-    # 2. Ensure the queue exists
-    queue = await channel.declare_queue(ORDER_QUEUE, durable=True)
+    # 2. Declare the dead letter exchange (DLX) and dead letter queue (DLQ)
+    dlx = await channel.declare_exchange("dlx", aio_pika.ExchangeType.DIRECT)
+    dlq = await channel.declare_queue(f"{ORDER_QUEUE}_dlq", durable=True)
+    await dlq.bind(dlx, routing_key=ORDER_QUEUE)
 
-    # 3. Start listening in the background
+    # 3. Declare the main queue and tell it to route failures to the DLX
+    arguments = {
+        "x-dead-letter-exchange": "dlx",
+        "x-dead-letter-routing-key": ORDER_QUEUE,
+    }
+    queue = await channel.declare_queue(ORDER_QUEUE, durable=True, arguments=arguments)
+
+    # 4. Consume messages
     await queue.consume(process_message)
     print("Inventory Service is now listening for order events...")
 
