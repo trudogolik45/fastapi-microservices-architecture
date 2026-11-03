@@ -1,0 +1,10 @@
+[project]
+name = "order-service"
+version = "0.1.0"
+description = "Order service (publishes events)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aio-pika>=10.2.2",
+    "fastapi[standard]>=0.162.0",
+]

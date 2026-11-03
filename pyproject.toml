@@ -5,7 +5,7 @@ description = "FastAPI microservices monorepo"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.162.0",
+    "fastapi[standard]>=0.162.0",
     "pyjwt>=2.15.1",
 ]
 
@@ -13,4 +13,5 @@ dependencies = [
 members = [
     "services/user-service",
     "services/product-service",
+    "services/order-service",
 ]
